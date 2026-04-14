@@ -12,14 +12,21 @@ st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
 # =========================
 def fetch_onpe():
     try:
-        url = "https://resultados.onpe.gob.pe/api/elecciones/eleccion/1/resumen"
-        res = requests.get(url, timeout=5)
+        url = "https://resultados.onpe.gob.pe/PRP2026/Elecciones/ResumenGeneral"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+
+        res = requests.get(url, headers=headers, timeout=10)
 
         if res.status_code == 200:
             return res.json()
         else:
             return None
-    except:
+    except Exception as e:
+        st.error(f"Error ONPE: {e}")
         return None
 
 # =========================
@@ -27,15 +34,14 @@ def fetch_onpe():
 # =========================
 def process_data(raw):
     try:
-        regiones = raw["data"]
-
         data = []
-        for r in regiones:
+
+        for r in raw["departamentos"]:
             data.append({
-                "region": r["departamento"],
-                "validos": r["votos_validos"],
-                "nulos": r["votos_nulos"],
-                "blancos": r["votos_blancos"]
+                "region": r["nombre"],
+                "validos": r["votosValidos"],
+                "nulos": r["votosNulos"],
+                "blancos": r["votosBlancos"]
             })
 
         return data
@@ -111,16 +117,40 @@ with open("frontend/assets/peru_regions.geojson") as f:
     geojson = json.load(f)
 
 # mapa
+import json
+
+with open("frontend/assets/peru.geojson") as f:
+    geojson = json.load(f)
+
 fig_map = px.choropleth(
     df,
     geojson=geojson,
     locations="region",
     featureidkey="properties.name",
     color="validos",
-    color_continuous_scale="Blues",
-    title="Votos por región"
+    color_continuous_scale="Reds"
 )
 
 fig_map.update_geos(fitbounds="locations", visible=False)
 
 st.plotly_chart(fig_map, use_container_width=True)
+
+region = st.selectbox("Selecciona región", df["region"])
+
+filtered = df[df["region"] == region]
+
+st.dataframe(filtered)
+
+import json
+
+with open("frontend/assets/candidatos.json") as f:
+    candidatos = json.load(f)
+
+st.subheader("Resultados por candidato")
+
+for c in candidatos:
+    st.metric(c["nombre"], c["votos"])
+
+    top = max(candidatos, key=lambda x: x["votos"])
+
+st.success(f"🟢 Líder actual: {top['nombre']}")

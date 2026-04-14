@@ -43,10 +43,21 @@ def fetch_data():
         {"region": "Arequipa", "validos": 20000, "nulos": 1000, "blancos": 500},
     ])
 
-df = fetch_data()
+import requests
 
-df["invalidos"] = df["nulos"] + df["blancos"]
-df["total"] = df["validos"] + df["invalidos"]
+@st.cache_data(ttl=60)
+def fetch_data():
+    try:
+        res = requests.get("http://localhost:8000/onpe", timeout=5)
+        data = res.json()
+
+        if data["status"] == "ok":
+            return pd.DataFrame(data["data"])
+
+    except:
+        pass
+
+    return pd.DataFrame()
 
 # =========================
 # KPIs
@@ -110,8 +121,15 @@ st.plotly_chart(fig2, use_container_width=True)
 # =========================
 # SELECTOR
 # =========================
-region = st.selectbox("Selecciona región", df["region"])
-r = df[df["region"] == region]
+if not df.empty:
+    region = st.selectbox("Selecciona región", df["region"].unique())
+
+    r = df[df["region"] == region]
+
+    st.metric("Válidos", int(r["validos"].values[0]))
+    st.metric("Inválidos", int(r["invalidos"].values[0]))
+else:
+    st.error("No hay datos disponibles")
 
 st.metric("Válidos", int(r["validos"].values[0]))
 st.metric("Inválidos", int(r["invalidos"].values[0]))

@@ -102,3 +102,25 @@ r = df[df["region"] == region]
 
 st.metric("Válidos", int(r["validos"].values[0]))
 st.metric("Inválidos", int(r["invalidos"].values[0]))
+import json
+
+st.subheader("🗺️ Mapa electoral del Perú")
+
+# cargar geojson
+with open("frontend/assets/peru_regions.geojson") as f:
+    geojson = json.load(f)
+
+# mapa
+fig_map = px.choropleth(
+    df,
+    geojson=geojson,
+    locations="region",
+    featureidkey="properties.name",
+    color="validos",
+    color_continuous_scale="Blues",
+    title="Votos por región"
+)
+
+fig_map.update_geos(fitbounds="locations", visible=False)
+
+st.plotly_chart(fig_map, use_container_width=True)

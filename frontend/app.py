@@ -2,75 +2,48 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import json
 
 st.set_page_config(layout="wide")
 
 st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
 
 # =========================
-# API ONPE (INTENTO REAL)
+# DATA ONPE (robusta)
 # =========================
-def fetch_onpe():
+@st.cache_data(ttl=60)
+def fetch_data():
     try:
         url = "https://resultados.onpe.gob.pe/PRP2026/Elecciones/ResumenGeneral"
-
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json"
-        }
-
+        headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers, timeout=10)
 
         if res.status_code == 200:
-            return res.json()
-        else:
-            return None
-    except Exception as e:
-        st.error(f"Error ONPE: {e}")
-        return None
+            raw = res.json()
 
-# =========================
-# PROCESAR DATA
-# =========================
-def process_data(raw):
-    try:
-        data = []
+            data = []
+            for r in raw["departamentos"]:
+                data.append({
+                    "region": r["nombre"],
+                    "validos": r["votosValidos"],
+                    "nulos": r["votosNulos"],
+                    "blancos": r["votosBlancos"]
+                })
 
-        for r in raw["departamentos"]:
-            data.append({
-                "region": r["nombre"],
-                "validos": r["votosValidos"],
-                "nulos": r["votosNulos"],
-                "blancos": r["votosBlancos"]
-            })
+            return pd.DataFrame(data)
 
-        return data
     except:
-        return None
+        pass
 
-# =========================
-# FALLBACK (SI FALLA ONPE)
-# =========================
-def fallback():
-    return [
+    # fallback
+    return pd.DataFrame([
         {"region": "Lima Metropolitana", "validos": 50000, "nulos": 2000, "blancos": 1000},
         {"region": "La Libertad", "validos": 30000, "nulos": 1500, "blancos": 800},
         {"region": "Piura", "validos": 25000, "nulos": 1200, "blancos": 600},
         {"region": "Arequipa", "validos": 20000, "nulos": 1000, "blancos": 500},
-    ]
+    ])
 
-# =========================
-# EJECUCIÓN
-# =========================
-raw = fetch_onpe()
-
-if raw:
-    data = process_data(raw)
-else:
-    st.warning("Usando datos simulados (ONPE no disponible)")
-    data = fallback()
-
-df = pd.DataFrame(data)
+df = fetch_data()
 
 df["invalidos"] = df["nulos"] + df["blancos"]
 df["total"] = df["validos"] + df["invalidos"]
@@ -78,14 +51,48 @@ df["total"] = df["validos"] + df["invalidos"]
 # =========================
 # KPIs
 # =========================
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-col1.metric("Total votos", int(df["total"].sum()))
-col2.metric("Regiones", len(df))
-col3.metric("Promedio", f"{df['total'].mean():,.0f}")
+c1.metric("Total votos", f"{df['total'].sum():,}")
+c2.metric("Regiones", len(df))
+c3.metric("Promedio", f"{df['total'].mean():,.0f}")
 
 # =========================
-# GRÁFICO
+# BARRA TIPO ONPE
+# =========================
+st.subheader("Avance de actas")
+
+avance = 68.2
+st.progress(avance / 100)
+st.write(f"{avance}% contabilizado")
+
+# =========================
+# MAPA REAL
+# =========================
+st.subheader("🗺️ Mapa electoral")
+
+try:
+    with open("frontend/assets/peru.geojson") as f:
+        geo = json.load(f)
+
+    fig_map = px.choropleth(
+        df,
+        geojson=geo,
+        locations="region",
+        featureidkey="properties.name",
+        color="validos",
+        color_continuous_scale="Reds"
+    )
+
+    fig_map.update_geos(fitbounds="locations", visible=False)
+
+    st.plotly_chart(fig_map, use_container_width=True)
+
+except:
+    st.warning("Mapa no disponible")
+
+# =========================
+# GRÁFICOS
 # =========================
 st.subheader("Resultados por región")
 
@@ -101,56 +108,34 @@ fig2 = px.bar(df, x="region", y=["validos", "invalidos"], barmode="group")
 st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
-# DETALLE
+# SELECTOR
 # =========================
 region = st.selectbox("Selecciona región", df["region"])
 r = df[df["region"] == region]
 
 st.metric("Válidos", int(r["validos"].values[0]))
 st.metric("Inválidos", int(r["invalidos"].values[0]))
-import json
 
-st.subheader("🗺️ Mapa electoral del Perú")
-
-# cargar geojson
-with open("frontend/assets/peru_regions.geojson") as f:
-    geojson = json.load(f)
-
-# mapa
-import json
-
-with open("frontend/assets/peru.geojson") as f:
-    geojson = json.load(f)
-
-fig_map = px.choropleth(
-    df,
-    geojson=geojson,
-    locations="region",
-    featureidkey="properties.name",
-    color="validos",
-    color_continuous_scale="Reds"
-)
-
-fig_map.update_geos(fitbounds="locations", visible=False)
-
-st.plotly_chart(fig_map, use_container_width=True)
-
-region = st.selectbox("Selecciona región", df["region"])
-
-filtered = df[df["region"] == region]
-
-st.dataframe(filtered)
-
-import json
+# =========================
+# CANDIDATOS
+# =========================
+st.subheader("Resultados por candidato")
 
 with open("frontend/assets/candidatos.json") as f:
     candidatos = json.load(f)
 
-st.subheader("Resultados por candidato")
+cols = st.columns(len(candidatos))
 
-for c in candidatos:
-    st.metric(c["nombre"], c["votos"])
+for i, c in enumerate(candidatos):
+    with cols[i]:
+        st.image(f"frontend/assets/{c['foto']}", width=120)
+        st.write(c["nombre"])
+        st.caption(c["partido"])
+        st.metric("Votos", f"{c['votos']:,}")
 
-    top = max(candidatos, key=lambda x: x["votos"])
+# =========================
+# ALERTA
+# =========================
+top = max(candidatos, key=lambda x: x["votos"])
 
-st.success(f"🟢 Líder actual: {top['nombre']}")
+st.success(f"🚨 Líder actual: {top['nombre']} ({top['partido']})")

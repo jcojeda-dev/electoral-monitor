@@ -49,14 +49,19 @@ import json
 @app.get("/onpe")
 def get_onpe():
 
-    try:
-        with open("backend/data/onpe_cache.json") as f:
-            data = json.load(f)
+    with open("backend/data/onpe_cache.json") as f:
+        raw = json.load(f)
 
-        return {
-            "status": "ok",
-            "data": data["data"]
-        }
+    data = []
 
-    except:
-        return {"status": "error", "data": []}
+    for r in raw["data"]:
+        ganador = max(r["candidatos"], key=lambda x: x["votos"])
+
+        data.append({
+            "region": r["region"],
+            "ganador": ganador["nombre"],
+            "color": ganador["color"],
+            "votos": ganador["votos"]
+        })
+
+    return {"status": "ok", "data": data}

@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "region": "Lima Metropolitana",
+      "candidatos": [
+        {"nombre": "Keiko", "votos": 4000000, "color": "#f57c00"},
+        {"nombre": "Castillo", "votos": 3800000, "color": "#c62828"}
+      ]
+    },
+    {
+      "region": "La Libertad",
+      "candidatos": [
+        {"nombre": "Keiko", "votos": 700000, "color": "#f57c00"},
+        {"nombre": "Castillo", "votos": 900000, "color": "#c62828"}
+      ]
+    },
+    {
+      "region": "Piura",
+      "candidatos": [
+        {"nombre": "Keiko", "votos": 800000, "color": "#f57c00"},
+        {"nombre": "Castillo", "votos": 600000, "color": "#c62828"}
+      ]
+    }
+  ]
+}

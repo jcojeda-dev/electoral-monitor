@@ -18,7 +18,7 @@ if time.time() - st.session_state.last_update > 10:
     st.rerun()
 
 # =========================
-# FETCH DATA (API)
+# FETCH DATA
 # =========================
 @st.cache_data(ttl=10)
 def fetch_data():
@@ -46,7 +46,15 @@ if df.empty:
 st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
 
 # =========================
-# KPI
+# KPI CORRECTO
+# =========================
+c1, c2 = st.columns(2)
+
+c1.metric("Total votos", f"{df['votos'].sum():,}")
+c2.metric("Regiones", len(df))
+
+# =========================
+# LIDER NACIONAL
 # =========================
 top = df["ganador"].value_counts().idxmax()
 st.success(f"🏆 Líder nacional: {top}")
@@ -109,22 +117,12 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================
-# TABLA DETALLE
+# TABLA
 # =========================
 st.subheader("Resultados por región")
-
 st.dataframe(df)
 
 # =========================
-# GUARDAR ESTADO
+# SAVE STATE
 # =========================
 st.session_state.prev_df = df.copy()
-
-c1.metric("Total votos", f"{df['votos'].sum():,}")
-
-c1, c2 = st.columns(2)
-
-c1.metric("Total votos (ganadores)", f"{df['votos'].sum():,}")
-c2.metric("Regiones reportadas", len(df))
-
-df["votos"]

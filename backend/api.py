@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 import requests
-import pandas as pd
 
 app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "API funcionando"}
+
+@app.get("/onpe")
+def get_onpe():
+    return {"status": "ok", "data": [{"region": "Lima", "validos": 12345}]}
 
 # =========================
 # SCRAPER ONPE ROBUSTO

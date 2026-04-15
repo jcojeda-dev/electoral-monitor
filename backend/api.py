@@ -43,35 +43,19 @@ def fetch_onpe():
 # =========================
 # ENDPOINT REAL
 # =========================
+
+import json
+
 @app.get("/onpe")
 def get_onpe():
 
-    raw = fetch_onpe()
-
-    # fallback si ONPE falla
-    if not raw:
-        return {
-            "status": "fallback",
-            "data": [
-                {"region": "Lima Metropolitana", "validos": 50000, "nulos": 2000, "blancos": 1000},
-                {"region": "La Libertad", "validos": 30000, "nulos": 1500, "blancos": 800}
-            ]
-        }
-
     try:
-        data = []
-
-        for r in raw.get("departamentos", []):
-            data.append({
-                "region": r.get("nombre"),
-                "validos": r.get("votosValidos", 0),
-                "nulos": r.get("votosNulos", 0),
-                "blancos": r.get("votosBlancos", 0)
-            })
+        with open("backend/data/onpe_cache.json") as f:
+            data = json.load(f)
 
         return {
             "status": "ok",
-            "data": data
+            "data": data["data"]
         }
 
     except:

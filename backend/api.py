@@ -15,20 +15,30 @@ def root():
 # =========================
 def fetch_onpe():
     try:
-        url = "https://resultados.onpe.gob.pe/PRP2026/Elecciones/ResumenGeneral"
+        session = requests.Session()
 
         headers = {
             "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json"
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://resultados.onpe.gob.pe/",
+            "Origin": "https://resultados.onpe.gob.pe"
         }
 
-        res = requests.get(url, headers=headers, timeout=10)
+        # Paso 1: abrir página (para cookies)
+        session.get("https://resultados.onpe.gob.pe/", headers=headers)
+
+        # Paso 2: endpoint real (puede variar)
+        url = "https://resultados.onpe.gob.pe/api/Resultados/Resumen"
+
+        res = session.get(url, headers=headers, timeout=10)
 
         if res.status_code == 200:
             return res.json()
 
-    except:
-        return None
+    except Exception as e:
+        print("Error ONPE:", e)
+
+    return None
 
 # =========================
 # ENDPOINT REAL

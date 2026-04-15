@@ -1,3 +1,6 @@
+top = df["ganador"].value_counts().idxmax()
+st.success(f"🏆 Lider nacional: {top}")
+
 st.subheader("🗺️ Mapa electoral por candidato")
 
 fig_map = px.choropleth(

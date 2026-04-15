@@ -3,16 +3,15 @@ import requests
 
 app = FastAPI()
 
+# =========================
+# ROOT
+# =========================
 @app.get("/")
 def root():
     return {"status": "ok", "message": "API funcionando"}
 
-@app.get("/onpe")
-def get_onpe():
-    return {"status": "ok", "data": [{"region": "Lima", "validos": 12345}]}
-
 # =========================
-# SCRAPER ONPE ROBUSTO
+# SCRAPER ONPE
 # =========================
 def fetch_onpe():
     try:
@@ -32,25 +31,32 @@ def fetch_onpe():
         return None
 
 # =========================
-# ENDPOINT
+# ENDPOINT REAL
 # =========================
 @app.get("/onpe")
 def get_onpe():
 
     raw = fetch_onpe()
 
+    # fallback si ONPE falla
     if not raw:
-        return {"status": "fallback", "data": []}
+        return {
+            "status": "fallback",
+            "data": [
+                {"region": "Lima Metropolitana", "validos": 50000, "nulos": 2000, "blancos": 1000},
+                {"region": "La Libertad", "validos": 30000, "nulos": 1500, "blancos": 800}
+            ]
+        }
 
     try:
         data = []
 
-        for r in raw["departamentos"]:
+        for r in raw.get("departamentos", []):
             data.append({
-                "region": r["nombre"],
-                "validos": r["votosValidos"],
-                "nulos": r["votosNulos"],
-                "blancos": r["votosBlancos"]
+                "region": r.get("nombre"),
+                "validos": r.get("votosValidos", 0),
+                "nulos": r.get("votosNulos", 0),
+                "blancos": r.get("votosBlancos", 0)
             })
 
         return {

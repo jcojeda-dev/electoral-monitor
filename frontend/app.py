@@ -3,84 +3,66 @@ import pandas as pd
 import plotly.express as px
 import requests
 import json
+import time
 
 st.set_page_config(layout="wide")
 
-st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
+# =========================
+# LIVE MODE
+# =========================
+if "last_update" not in st.session_state:
+    st.session_state.last_update = time.time()
+
+if time.time() - st.session_state.last_update > 10:
+    st.session_state.last_update = time.time()
+    st.rerun()
 
 # =========================
-# DATA ONPE (robusta)
+# FETCH DATA
 # =========================
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)
 def fetch_data():
     try:
-        url = "https://resultados.onpe.gob.pe/PRP2026/Elecciones/ResumenGeneral"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(url, headers=headers, timeout=10)
-
-        if res.status_code == 200:
-            raw = res.json()
-
-            data = []
-            for r in raw["departamentos"]:
-                data.append({
-                    "region": r["nombre"],
-                    "validos": r["votosValidos"],
-                    "nulos": r["votosNulos"],
-                    "blancos": r["votosBlancos"]
-                })
-
-            return pd.DataFrame(data)
-
-    except:
-        pass
-
-    # fallback
-    return pd.DataFrame([
-        {"region": "Lima Metropolitana", "validos": 50000, "nulos": 2000, "blancos": 1000},
-        {"region": "La Libertad", "validos": 30000, "nulos": 1500, "blancos": 800},
-        {"region": "Piura", "validos": 25000, "nulos": 1200, "blancos": 600},
-        {"region": "Arequipa", "validos": 20000, "nulos": 1000, "blancos": 500},
-    ])
-
-import requests
-
-@st.cache_data(ttl=60)
-def fetch_data():
-    try:
-        res = requests.get("http://localhost:8000/onpe", timeout=5)
+        res = requests.get("https://electoral-monitor.onrender.com/onpe", timeout=5)
         data = res.json()
 
         if data["status"] == "ok":
             return pd.DataFrame(data["data"])
 
-    except:
-        pass
+    except Exception as e:
+        st.warning(f"Error API: {e}")
 
     return pd.DataFrame()
 
-# =========================
-# KPIs
-# =========================
-c1, c2, c3 = st.columns(3)
+df = fetch_data()
 
-c1.metric("Total votos", f"{df['total'].sum():,}")
+if df.empty:
+    st.error("No hay datos disponibles")
+    st.stop()
+
+# =========================
+# HEADER
+# =========================
+st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
+
+# =========================
+# KPI CORRECTO
+# =========================
+c1, c2 = st.columns(2)
+
+c1.metric("Total votos", f"{df['votos'].sum():,}")
 c2.metric("Regiones", len(df))
-c3.metric("Promedio", f"{df['total'].mean():,.0f}")
 
 # =========================
-# BARRA TIPO ONPE
+# LIDER NACIONAL
 # =========================
-st.subheader("Avance de actas")
-
-avance = 68.2
-st.progress(avance / 100)
-st.write(f"{avance}% contabilizado")
+top = df["ganador"].value_counts().idxmax()
+st.success(f"🏆 Líder nacional: {top}")
 
 # =========================
-# MAPA REAL
+# MAPA
 # =========================
-st.subheader("🗺️ Mapa electoral")
+st.subheader("🗺️ Mapa electoral por candidato")
 
 try:
     with open("frontend/assets/peru.geojson") as f:
@@ -91,8 +73,11 @@ try:
         geojson=geo,
         locations="region",
         featureidkey="properties.name",
-        color="validos",
-        color_continuous_scale="Reds"
+        color="ganador",
+        color_discrete_map={
+            "Keiko": "#f57c00",
+            "Castillo": "#c62828"
+        }
     )
 
     fig_map.update_geos(fitbounds="locations", visible=False)
@@ -103,57 +88,41 @@ except:
     st.warning("Mapa no disponible")
 
 # =========================
-# GRÁFICOS
+# LIVE EVENTS
+# =========================
+if "prev_df" not in st.session_state:
+    st.session_state.prev_df = df.copy()
+
+prev_df = st.session_state.prev_df
+events = []
+
+if not prev_df.empty:
+    prev_top = prev_df["ganador"].value_counts().idxmax()
+    new_top = df["ganador"].value_counts().idxmax()
+
+    if prev_top != new_top:
+        events.append(f"🚨 Nuevo líder nacional: {new_top}")
+
+# =========================
+# TICKER
+# =========================
+st.markdown("### 🔴 EN VIVO")
+
+ticker = " | ".join(events) if events else "Actualizando resultados..."
+
+st.markdown(f"""
+<div style="background:black;color:white;padding:10px;">
+{ticker}
+</div>
+""", unsafe_allow_html=True)
+
+# =========================
+# TABLA
 # =========================
 st.subheader("Resultados por región")
-
-fig = px.bar(df, x="region", y="validos", color="validos")
-st.plotly_chart(fig, use_container_width=True)
+st.dataframe(df)
 
 # =========================
-# COMPARATIVA
+# SAVE STATE
 # =========================
-st.subheader("Válidos vs Inválidos")
-
-fig2 = px.bar(df, x="region", y=["validos", "invalidos"], barmode="group")
-st.plotly_chart(fig2, use_container_width=True)
-
-# =========================
-# SELECTOR
-# =========================
-if not df.empty:
-    region = st.selectbox("Selecciona región", df["region"].unique())
-
-    r = df[df["region"] == region]
-
-    st.metric("Válidos", int(r["validos"].values[0]))
-    st.metric("Inválidos", int(r["invalidos"].values[0]))
-else:
-    st.error("No hay datos disponibles")
-
-st.metric("Válidos", int(r["validos"].values[0]))
-st.metric("Inválidos", int(r["invalidos"].values[0]))
-
-# =========================
-# CANDIDATOS
-# =========================
-st.subheader("Resultados por candidato")
-
-with open("frontend/assets/candidatos.json") as f:
-    candidatos = json.load(f)
-
-cols = st.columns(len(candidatos))
-
-for i, c in enumerate(candidatos):
-    with cols[i]:
-        st.image(f"frontend/assets/{c['foto']}", width=120)
-        st.write(c["nombre"])
-        st.caption(c["partido"])
-        st.metric("Votos", f"{c['votos']:,}")
-
-# =========================
-# ALERTA
-# =========================
-top = max(candidatos, key=lambda x: x["votos"])
-
-st.success(f"🚨 Líder actual: {top['nombre']} ({top['partido']})")
+st.session_state.prev_df = df.copy()

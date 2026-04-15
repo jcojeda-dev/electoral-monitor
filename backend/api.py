@@ -1,101 +1,40 @@
-from fastapi import FastAPI
-import json
-import os
-
-app = FastAPI()
-
-# =========================
-# CONFIG
-# =========================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, "data", "onpe_cache.json")
-
-# =========================
-# ROOT (HEALTH CHECK)
-# =========================
-@app.get("/")
-def root():
-    return {
-        "status": "ok",
-        "message": "API funcionando"
-    }
-
-# =========================
-# LOAD DATA
-# =========================
+@st.cache_data(ttl=30)
 def load_data():
     try:
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print("Error loading data:", e)
-        return None
+        import requests
 
-# =========================
-# PROCESS DATA
-# =========================
-def process_data(raw):
+        url = "https://renzonunezaf.github.io/Elecciones_2026/"
 
-    response = []
+        res = requests.get(url, timeout=10)
 
-    for r in raw.get("data", []):
+        html = res.text
 
-        candidatos = r.get("candidatos", [])
+        # PARSEO SIMPLE (REAL)
+        rows = []
 
-        if not candidatos:
-            continue
+        # buscamos patrones tipo tabla
+        import re
 
-        # calcular ganador
-        ganador = max(candidatos, key=lambda x: x.get("votos", 0))
+        pattern = re.findall(
+            r"<tr>(.*?)</tr>",
+            html,
+            re.DOTALL
+        )
 
-        response.append({
-            "region": r.get("region"),
-            "ganador": ganador.get("nombre"),
-            "color": ganador.get("color"),
-            "votos": ganador.get("votos")
-        })
+        for row in pattern:
+            cols = re.findall(r"<td>(.*?)</td>", row)
 
-    return response
+            if len(cols) >= 3:
+                rows.append({
+                    "region": cols[0].strip(),
+                    "candidato": cols[1].strip(),
+                    "votos": int(cols[2].replace(",", "").strip())
+                })
 
-# =========================
-# ENDPOINT PRINCIPAL
-# =========================
-@app.get("/onpe")
-def get_onpe():
+        df = pd.DataFrame(rows)
 
-    raw = load_data()
-
-    # 🔴 fallback si falla archivo
-    if not raw:
-        return {
-            "status": "fallback",
-            "data": [
-                {
-                    "region": "Lima Metropolitana",
-                    "ganador": "Keiko",
-                    "color": "#f57c00",
-                    "votos": 4000000
-                },
-                {
-                    "region": "La Libertad",
-                    "ganador": "Castillo",
-                    "color": "#c62828",
-                    "votos": 900000
-                }
-            ]
-        }
-
-    try:
-        data = process_data(raw)
-
-        return {
-            "status": "ok",
-            "data": data
-        }
+        return df
 
     except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "data": []
-        }
+        st.error(f"Error real cargando datos: {e}")
+        return pd.DataFrame()

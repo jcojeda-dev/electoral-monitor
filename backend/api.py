@@ -119,3 +119,12 @@ st.dataframe(df)
 # GUARDAR ESTADO
 # =========================
 st.session_state.prev_df = df.copy()
+
+c1.metric("Total votos", f"{df['votos'].sum():,}")
+
+c1, c2 = st.columns(2)
+
+c1.metric("Total votos (ganadores)", f"{df['votos'].sum():,}")
+c2.metric("Regiones reportadas", len(df))
+
+df["votos"]

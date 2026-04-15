@@ -2,42 +2,56 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
-import json
 import time
 
 st.set_page_config(layout="wide")
 
 # =========================
-# LIVE MODE
+# CONFIG
+# =========================
+DATA_URL = "https://renzonunezaf.github.io/Elecciones_2026/"
+REFRESH = 30  # segundos
+
+# =========================
+# AUTO REFRESH
 # =========================
 if "last_update" not in st.session_state:
     st.session_state.last_update = time.time()
 
-if time.time() - st.session_state.last_update > 10:
+if time.time() - st.session_state.last_update > REFRESH:
     st.session_state.last_update = time.time()
     st.rerun()
 
 # =========================
-# FETCH DATA
+# LOAD REAL DATA (HTML TABLE)
 # =========================
-@st.cache_data(ttl=10)
-def fetch_data():
+@st.cache_data(ttl=30)
+def load_data():
     try:
-        res = requests.get("https://electoral-monitor.onrender.com/onpe", timeout=5)
-        data = res.json()
+        tables = pd.read_html(DATA_URL)
+        df = tables[0]  # primera tabla
 
-        if data["status"] == "ok":
-            return pd.DataFrame(data["data"])
+        df.columns = [c.lower() for c in df.columns]
+
+        # normalizar nombres esperados
+        df = df.rename(columns={
+            "región": "region",
+            "candidato": "candidato",
+            "votos": "votos"
+        })
+
+        df["votos"] = pd.to_numeric(df["votos"], errors="coerce").fillna(0)
+
+        return df
 
     except Exception as e:
-        st.warning(f"Error API: {e}")
+        st.error(f"Error cargando datos reales: {e}")
+        return pd.DataFrame()
 
-    return pd.DataFrame()
-
-df = fetch_data()
+df = load_data()
 
 if df.empty:
-    st.error("No hay datos disponibles")
+    st.error("No se pudo cargar la data")
     st.stop()
 
 # =========================
@@ -46,83 +60,68 @@ if df.empty:
 st.title("📊 Monitor Electoral Perú 🔴 EN VIVO")
 
 # =========================
-# KPI CORRECTO
+# FILTROS
 # =========================
+st.sidebar.header("Filtros")
+
+regiones = st.sidebar.multiselect(
+    "Selecciona región",
+    options=df["region"].unique(),
+    default=df["region"].unique()
+)
+
+candidatos = st.sidebar.multiselect(
+    "Selecciona candidato",
+    options=df["candidato"].unique(),
+    default=df["candidato"].unique()
+)
+
+df = df[
+    (df["region"].isin(regiones)) &
+    (df["candidato"].isin(candidatos))
+]
+
+# =========================
+# KPIs
+# =========================
+total_votos = df["votos"].sum()
+
 c1, c2 = st.columns(2)
-
-c1.metric("Total votos", f"{df['votos'].sum():,}")
-c2.metric("Regiones", len(df))
-
-# =========================
-# LIDER NACIONAL
-# =========================
-top = df["ganador"].value_counts().idxmax()
-st.success(f"🏆 Líder nacional: {top}")
+c1.metric("Total votos", f"{total_votos:,.0f}")
+c2.metric("Regiones", df["region"].nunique())
 
 # =========================
-# MAPA
+# RESULTADO NACIONAL
 # =========================
-st.subheader("🗺️ Mapa electoral por candidato")
+st.subheader("Resultados nacionales")
 
-try:
-    with open("frontend/assets/peru.geojson") as f:
-        geo = json.load(f)
+resumen = df.groupby("candidato")["votos"].sum().reset_index()
+resumen["%"] = resumen["votos"] / resumen["votos"].sum() * 100
+resumen = resumen.sort_values("votos", ascending=False)
 
-    fig_map = px.choropleth(
-        df,
-        geojson=geo,
-        locations="region",
-        featureidkey="properties.name",
-        color="ganador",
-        color_discrete_map={
-            "Keiko": "#f57c00",
-            "Castillo": "#c62828"
-        }
-    )
+fig = px.bar(
+    resumen,
+    x="candidato",
+    y="%",
+    text=resumen["%"].map(lambda x: f"{x:.2f}%")
+)
 
-    fig_map.update_geos(fitbounds="locations", visible=False)
+fig.update_traces(textposition="outside")
 
-    st.plotly_chart(fig_map, use_container_width=True)
-
-except:
-    st.warning("Mapa no disponible")
+st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# LIVE EVENTS
+# GANADOR POR REGIÓN
 # =========================
-if "prev_df" not in st.session_state:
-    st.session_state.prev_df = df.copy()
+st.subheader("Ganador por región")
 
-prev_df = st.session_state.prev_df
-events = []
+df_top = df.sort_values("votos", ascending=False).groupby("region").first().reset_index()
 
-if not prev_df.empty:
-    prev_top = prev_df["ganador"].value_counts().idxmax()
-    new_top = df["ganador"].value_counts().idxmax()
-
-    if prev_top != new_top:
-        events.append(f"🚨 Nuevo líder nacional: {new_top}")
+st.dataframe(df_top)
 
 # =========================
-# TICKER
+# DETALLE
 # =========================
-st.markdown("### 🔴 EN VIVO")
+st.subheader("Detalle completo")
 
-ticker = " | ".join(events) if events else "Actualizando resultados..."
-
-st.markdown(f"""
-<div style="background:black;color:white;padding:10px;">
-{ticker}
-</div>
-""", unsafe_allow_html=True)
-
-# =========================
-# TABLA
-# =========================
-st.subheader("Resultados por región")
-st.dataframe(df)
-
-# =========================
-# SAVE STATE
-# =========================
-st.session_state.prev_df = df.copy()
+st.dataframe(df.sort_values(["region", "votos"], ascending=[True, False]))

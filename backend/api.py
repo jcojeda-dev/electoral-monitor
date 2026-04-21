@@ -1,40 +1,15 @@
 @st.cache_data(ttl=30)
 def load_data():
     try:
-        import requests
-
-        url = "https://renzonunezaf.github.io/Elecciones_2026/"
+        url = "https://raw.githubusercontent.com/itamarRtec/analisis1/main/data/archivo.json"
 
         res = requests.get(url, timeout=10)
+        data = res.json()
 
-        html = res.text
-
-        # PARSEO SIMPLE (REAL)
-        rows = []
-
-        # buscamos patrones tipo tabla
-        import re
-
-        pattern = re.findall(
-            r"<tr>(.*?)</tr>",
-            html,
-            re.DOTALL
-        )
-
-        for row in pattern:
-            cols = re.findall(r"<td>(.*?)</td>", row)
-
-            if len(cols) >= 3:
-                rows.append({
-                    "region": cols[0].strip(),
-                    "candidato": cols[1].strip(),
-                    "votos": int(cols[2].replace(",", "").strip())
-                })
-
-        df = pd.DataFrame(rows)
+        df = pd.DataFrame(data)
 
         return df
 
     except Exception as e:
-        st.error(f"Error real cargando datos: {e}")
+        st.error(f"Error cargando data real: {e}")
         return pd.DataFrame()

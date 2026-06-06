@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.edtechsaas.TeacherDailyAssistant</string>
+    <key>CFBundleName</key>
+    <string>TeacherDailyAssistant</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>whatsapp</string>
+    </array>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Necesitamos acceder al micrófono para que puedas dictar las actividades y tareas del día.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Utilizamos el reconocimiento de voz para convertir tu dictado a texto automáticamente.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Utilizamos Face ID para proteger de forma segura tus datos escolares y el historial de tus alumnos.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+</dict>
+</plist>

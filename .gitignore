@@ -1,0 +1,11 @@
+.env.example
+node_modules/
+.DS_Store
+*.xcarchive
+build/
+dist/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

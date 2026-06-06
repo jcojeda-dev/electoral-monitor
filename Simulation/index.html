@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Daily Assistant - Simulación</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f5f7fa; }
+        .container { max-width: 375px; margin: 20px auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .header h1 { font-size: 24px; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .content { padding: 20px; }
+        .btn { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .activity { background: #f9f9f9; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #667eea; }
+        .activity-title { font-weight: 600; color: #333; }
+        .activity-time { font-size: 12px; color: #999; margin-top: 4px; }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-sent { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Teacher Daily Assistant</h1>
+            <p>Tu voz redacta, tu WhatsApp comunica</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-bottom: 16px; font-size: 18px;">Resumen de Hoy</h2>
+            
+            <div style="background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+                <p style="font-size: 14px; color: #666; margin: 6px 0;">Registradas: <strong>5</strong></p>
+                <p style="font-size: 14px; color: #666; margin: 6px 0;">Enviadas: <strong>3</strong></p>
+                <p style="font-size: 14px; color: #666; margin: 6px 0;">Pendientes: <strong>2</strong></p>
+            </div>
+            
+            <h3 style="font-size: 14px; margin: 16px 0 8px 0; color: #667eea;">ACTIVIDADES DEL DÍA</h3>
+            
+            <div class="activity">
+                <div class="activity-title">[Tarea] Matemáticas - Pág 12</div>
+                <div class="activity-time">09:45 AM</div>
+                <div style="margin-top: 8px;"><span class="status status-pending">PENDIENTE</span></div>
+            </div>
+            
+            <div class="activity">
+                <div class="activity-title">[Comunicado] Reunión de Padres</div>
+                <div class="activity-time">10:30 AM</div>
+                <div style="margin-top: 8px;"><span class="status status-sent">ENVIADO</span></div>
+            </div>
+            
+            <div class="activity">
+                <div class="activity-title">[Actividad] Dibujo libre</div>
+                <div class="activity-time">01:00 PM</div>
+                <div style="margin-top: 8px;"><span class="status status-sent">ENVIADO</span></div>
+            </div>
+            
+            <div class="activity">
+                <div class="activity-title">[Incidencia] Comportamiento - Juan</div>
+                <div class="activity-time">02:15 PM</div>
+                <div style="margin-top: 8px;"><span class="status status-sent">ENVIADO</span></div>
+            </div>
+            
+            <div class="activity">
+                <div class="activity-title">[Recordatorio] Revisar tareas</div>
+                <div class="activity-time">03:00 PM</div>
+                <div style="margin-top: 8px;"><span class="status status-pending">PENDIENTE</span></div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="alert('Micro: Iniciar grabación')">🎙️ Iniciar Grabación</button>
+            <button class="btn btn-secondary" onclick="alert('Ver configuración')">⚙️ Configuración</button>
+            <button class="btn btn-secondary" onclick="alert('Ver resumen diario')">📊 Resumen Diario</button>
+        </div>
+    </div>
+</body>
+</html>
